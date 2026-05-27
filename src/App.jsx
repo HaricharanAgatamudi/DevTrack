@@ -45,7 +45,6 @@ const navItems = [
   { id: 'tasks', label: 'Tasks', icon: ListChecks, badge: 'tasks' },
   { id: 'sql', label: 'SQL Playground', icon: Database },
   { id: 'project', label: 'FS Project', icon: Code2 },
-  { id: 'assistant', label: 'AI Coach', icon: Bot },
   { section: 'Insights' },
   { id: 'progress', label: 'Progress', icon: BarChart3 },
   { id: 'notes', label: 'Notes', icon: FileText, badge: 'notes' },
@@ -213,7 +212,6 @@ function App() {
           {view === 'tasks' && <Tasks user={user} updateUser={updateUser} showToast={showToast} />}
           {view === 'sql' && <SqlPlayground user={user} updateUser={updateUser} showToast={showToast} />}
           {view === 'project' && <Project user={user} updateUser={updateUser} showToast={showToast} />}
-          {view === 'assistant' && <Coach user={user} updateUser={updateUser} />}
           {view === 'progress' && <Progress user={user} />}
           {view === 'notes' && <Notes user={user} updateUser={updateUser} showToast={showToast} />}
         </div>
@@ -253,7 +251,7 @@ function AuthScreen({ users, persist, setSession, showToast, toast }) {
           <h1 className="mt-5 max-w-xl text-4xl font-black tracking-normal text-white md:text-5xl">Your preparation starts on your first login.</h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-muted">Every user gets a personal Day 1 based on registration date. No backend is needed for GitHub Pages: accounts, tasks, focus logs, SQL attempts, notes, and progress are stored locally in the browser.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {['Dynamic 180-day schedule', 'SQL practice datasets', 'Manual focus timer', 'AI-style study coach'].map((item) => (
+            {['Dynamic 180-day schedule', 'SQL practice datasets', 'Manual focus timer', 'DevHive AI module plan'].map((item) => (
               <div key={item} className="card-sm flex items-center gap-2 text-sm font-semibold text-white"><Check className="h-4 w-4 text-grn" />{item}</div>
             ))}
           </div>
@@ -643,13 +641,29 @@ function ResultTable({ result }) {
 function Project({ user, updateUser, showToast }) {
   const done = Object.values(user.modProgress || {}).filter((status) => status === 'done').length
   const pct = Math.round((done / PROJ_MODS.length) * 100)
+  const nextModule = PROJ_MODS.find((mod) => user.modProgress?.[mod.id] !== 'done')
   return (
     <>
-      <PageTitle title="Full Stack Project" sub="DevHive - developer Q&A/community platform with auth, chat, payments, search, uploads, and deployment." />
+      <PageTitle title="Full Stack Project" sub="DevHive - developer Q&A/community platform with auth, AI assistant, real-time chat, payments, search, uploads, and deployment." />
       <div className="card mb-5 border-brand/40">
         <div className="mb-2 flex items-center justify-between gap-4"><div className="text-lg font-bold text-white">DevHive Portfolio Build</div><div className="font-mono text-2xl font-bold text-brandl">{pct}%</div></div>
         <ProgressLine label="Overall" pct={pct} color="#8B85FF" />
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg bg-cardb p-3">
+            <div className="sec-label mb-1">Next Build</div>
+            <div className="text-sm font-semibold text-white">{nextModule?.name || 'Final polish and deployment'}</div>
+          </div>
+          <div className="rounded-lg bg-cardb p-3">
+            <div className="sec-label mb-1">Backend Target</div>
+            <div className="text-sm font-semibold text-white">Express + MongoDB Atlas + JWT</div>
+          </div>
+          <div className="rounded-lg bg-cardb p-3">
+            <div className="sec-label mb-1">AI Target</div>
+            <div className="text-sm font-semibold text-white">RAG chatbot for posts, docs, users</div>
+          </div>
+        </div>
       </div>
+      <DevHiveAiModule user={user} updateUser={updateUser} showToast={showToast} />
       <div className="grid gap-3 md:grid-cols-2">
         {PROJ_MODS.map((mod) => {
           const status = user.modProgress?.[mod.id] || 'not-started'
@@ -667,48 +681,77 @@ function Project({ user, updateUser, showToast }) {
   )
 }
 
-function Coach({ user, updateUser }) {
+function DevHiveAiModule({ user, updateUser, showToast }) {
   const [prompt, setPrompt] = useState('')
-  const day = getDayNumber(user.registrationDate) + 1
-  const today = getDaySchedule(day - 1)
+  const aiSpec = [
+    'Frontend chat widget on DevHive question, post, profile, and dashboard pages',
+    'Backend route: POST /api/ai/chat with auth, rate limit, and conversation history',
+    'Context retrieval from MongoDB posts, answers, tags, bookmarks, and user activity',
+    'Moderation layer for unsafe prompts, spam, and private data leakage',
+    'Fallback local FAQ mode when the AI provider key is unavailable',
+    'Admin analytics: most asked topics, unanswered prompts, token usage, feedback score',
+  ]
 
   function reply(text) {
     const lower = text.toLowerCase()
-    if (lower.includes('sql')) return 'For SQL today: open SQL Playground, choose HR Database, run one JOIN query, one GROUP BY query, and one window-function style query. Save confusing patterns as notes.'
-    if (lower.includes('ml') || lower.includes('machine')) return 'For ML, write the concept in plain English first, then code a tiny example. Track metrics and note mistakes. Avoid jumping to deep learning before preprocessing and supervised basics are clear.'
-    if (lower.includes('dsa')) return 'For DSA, do 20 minutes of pattern revision, 70 minutes of problems, and 30 minutes of review. For must-do topics, solve fewer problems but write cleaner notes on the pattern.'
-    if (lower.includes('project')) return 'For DevHive, keep one deployable vertical slice at a time: auth, post CRUD, comments, search, notifications, then polish. Each module should end with a README update.'
-    return `Day ${day} plan: Morning - ${today.morning.title}. Evening - ${today.evening.title}. Keep one written note, one task completion, and one focus log today.`
+    if (lower.includes('schema') || lower.includes('database')) return 'DevHive AI needs Conversation, Message, AiFeedback, and AiKnowledgeSource collections. Store userId, role, content, citations, latencyMs, provider, model, and thumbsUp/down.'
+    if (lower.includes('api') || lower.includes('backend')) return 'Implement POST /api/ai/chat, GET /api/ai/conversations, DELETE /api/ai/conversations/:id, and POST /api/ai/feedback. Protect all routes with JWT and add per-user rate limits.'
+    if (lower.includes('rag') || lower.includes('context')) return 'For RAG, index approved posts, answers, tags, and docs. Retrieve top matching snippets, pass them as context, and return citations so the answer feels trustworthy.'
+    if (lower.includes('frontend') || lower.includes('ui')) return 'Frontend should include a floating assistant, full chat page, prompt chips, loading state, source cards, copy button, feedback buttons, and empty-state suggestions.'
+    if (lower.includes('deploy') || lower.includes('key')) return 'For deployment, keep AI keys only on the backend. Frontend calls your Express API. Use environment variables on Railway/Render and MongoDB Atlas for persistence.'
+    return 'DevHive AI Assistant module plan: build auth-protected chat UI, Express AI routes, MongoDB conversation history, context retrieval from DevHive content, feedback analytics, and provider-key-safe deployment.'
   }
 
   function send(e) {
     e.preventDefault()
     if (!prompt.trim()) return
     const answer = reply(prompt)
-    updateUser((u) => ({ chat: [{ role: 'user', text: prompt }, { role: 'coach', text: answer }, ...(u.chat || [])].slice(0, 20) }))
+    updateUser((u) => ({ devhiveAiChat: [{ role: 'user', text: prompt }, { role: 'assistant', text: answer }, ...(u.devhiveAiChat || [])].slice(0, 20) }))
     setPrompt('')
   }
 
+  function addAiTasks() {
+    const tasks = [
+      'Create DevHive AI chat widget and conversation page',
+      'Design MongoDB schemas for conversations, messages, feedback, and knowledge sources',
+      'Build Express AI routes with JWT auth and rate limiting',
+      'Add RAG retrieval from DevHive posts, answers, tags, and docs',
+      'Add AI feedback analytics to the admin dashboard',
+    ].map((title, index) => ({ id: Date.now() + index, title, track: 'Project', pri: index < 2 ? 'high' : 'med', phase: 'DevHive AI Assistant', due: todayKey(), notes: 'Portfolio module: AI chatbot inside DevHive, not DevTrack.', done: false }))
+    updateUser((u) => ({ tasks: [...tasks, ...u.tasks] }))
+    showToast('DevHive AI module tasks added')
+  }
+
   return (
-    <>
-      <PageTitle title="AI Coach" sub="A local rule-based chatbot for preparation guidance. It works on GitHub Pages without API keys." />
-      <div className="grid gap-4 md:grid-cols-[1fr_.8fr]">
+    <div className="card mb-5 border-l-4 border-brand">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-lg font-bold text-white"><Bot className="h-5 w-5 text-brandl" /> DevHive AI Assistant Module</div>
+          <p className="text-sm text-muted">This is the chatbot module for your full-stack DevHive project. DevTrack only tracks the build and provides a local prototype/spec.</p>
+        </div>
+        <button onClick={addAiTasks} className="btn btn-p"><Plus className="h-4 w-4" /> Add Build Tasks</button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
         <div className="card">
           <form onSubmit={send} className="flex gap-2">
-            <input className="inp" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ask about DSA, SQL, ML, project, or today's plan..." />
-            <button className="btn btn-p"><MessageSquare className="h-4 w-4" /> Ask</button>
+            <input className="inp" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ask about DevHive AI schema, API, RAG, frontend, or deployment..." />
+            <button className="btn btn-p"><MessageSquare className="h-4 w-4" /> Test</button>
           </form>
           <div className="mt-4 space-y-3">
-            {(user.chat || []).map((msg, index) => <div key={index} className={`rounded-xl p-3 text-sm ${msg.role === 'user' ? 'bg-brand/20 text-white' : 'bg-cardb text-[#C0C0D0]'}`}>{msg.text}</div>)}
-            {!user.chat?.length && <Empty text="Ask the coach how to structure today's preparation." />}
+            {(user.devhiveAiChat || []).map((msg, index) => <div key={index} className={`rounded-xl p-3 text-sm ${msg.role === 'user' ? 'bg-brand/20 text-white' : 'bg-cardb text-[#C0C0D0]'}`}>{msg.text}</div>)}
+            {!user.devhiveAiChat?.length && <Empty text="Test module questions like: What MongoDB schema should I use?" />}
           </div>
         </div>
         <div className="card">
-          <div className="sec-label mb-3">Smart Suggestions</div>
-          {['How should I practice DSA today?', 'Give me SQL practice for today', 'How do I balance ML and project?', 'What should I build in DevHive next?'].map((q) => <button key={q} onClick={() => setPrompt(q)} className="mb-2 w-full rounded-lg border border-border bg-cardb p-3 text-left text-sm text-white hover:border-brand">{q}</button>)}
+          <div className="sec-label mb-3">Module Requirements</div>
+          <div className="space-y-2">
+            {aiSpec.map((item) => <div key={item} className="flex gap-2 rounded-lg bg-cardb p-2.5 text-sm text-[#C0C0D0]"><Check className="mt-0.5 h-4 w-4 shrink-0 text-grn" />{item}</div>)}
+          </div>
+          <div className="sec-label mb-2 mt-4">Prompt Starters</div>
+          {['Design the database schema', 'Plan the backend API', 'Explain RAG context retrieval', 'Design the frontend UI', 'How should I deploy with API keys?'].map((q) => <button key={q} onClick={() => setPrompt(q)} className="mb-2 w-full rounded-lg border border-border bg-surf p-2 text-left text-xs text-muted hover:border-brand hover:text-white">{q}</button>)}
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
